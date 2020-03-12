@@ -1,0 +1,112 @@
+{% extends "base.html" %}
+
+{% block head %}
+<script src="https://maps.api.2gis.ru/2.0/loader.js?pkg=full"></script>
+<link rel="stylesheet" href="//code.jquery.com/ui/1.12.1/themes/base/jquery-ui.css">
+{% endblock %}
+
+{% block content %}
+    <div class="row">
+        <div class="col-9">
+            <div id="map" style="width:100%; height:80vh"></div>
+        </div>
+        <div class="col-3">
+            <form action="{{ url_for('map.get_route') }}" method="POST">
+                <div class="form-group">
+                    <label for="SelectCar">Выберите автомобиль</label>
+                    <select class="form-control" id="SelectCar">
+                    <option selected="selected"></option>
+                    {% for car in cars %}
+                    <option>{{ car.plate }}</option>
+                    {% endfor %}
+                    </select>
+                </div>
+                <div id="datepicker"></div>
+            </form>
+        </div>
+    </div>
+{% endblock %}
+
+{% block script %}
+<script src="https://code.jquery.com/ui/1.12.1/jquery-ui.js"></script>
+<script type="text/javascript">
+    var map;
+    var polyline;
+    var days = [];
+    var today = new Date();
+    var selectday = new Date(today.getFullYear(), today.getMonth(), 1).getTime();
+
+    DG.then(function () {
+        map = DG.map('map', {
+            center: [55.73, 37.61],
+            zoom: 11
+        });
+    });
+
+    function updateCalendar() {
+        days = [];
+        car = $("#SelectCar").val();
+        if (car != "") {
+            $.ajax({
+                type: "POST",
+                url: "{{ url_for('map.get_dates') }}",
+                data: {
+                    "car": car,
+                    "date": selectday
+                },
+                success: function (data) {
+                    for (x of data.dates) {
+                        days.push(parseInt(x));
+                    }
+                },
+                error: function (error) {
+                    console.log(error);
+                },
+                async: false
+            });
+        };
+        $("#datepicker").datepicker("refresh");
+        if (polyline) {polyline.remove();}
+        map.setView([55.73, 37.61], 11);
+    }
+
+    $('#SelectCar').change(updateCalendar);
+
+    $("#datepicker").datepicker({
+        firstDay: 1,
+        dayNamesMin: ["Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Вс"],
+        monthNames: ["Январь", "Февраль", "Март", "Апрель", "Май", "Июнь", "Июль", "Август", "Сентябрь", "Октябрь", "Ноябрь", "Декабрь"],
+        beforeShowDay: function(date){
+            if (days.includes(date.getDate())) {
+                return [true];
+            } else {
+                return [false];
+            }
+        },
+        onChangeMonthYear: function(year, month, inst) {
+            window.selectday = new Date(year, month-1, 1).getTime();
+            updateCalendar();
+        },
+        onSelect: function(date, inst) {
+            $.ajax({
+                type: "POST",
+                url: "{{ url_for('map.get_route') }}",
+                data: {
+                    "car": car,
+                    "date": date
+                },
+                success: function (data) {
+                    if (polyline) {polyline.remove();}
+                    polyline = DG.polyline(data.route, {
+                                color: 'blue'
+                                }).addTo(map);
+                    map.fitBounds(polyline.getBounds());
+                },
+                error: function (error) {
+                    console.log(error);
+                },
+            });
+        }
+    });
+</script>
+{% endblock %}
