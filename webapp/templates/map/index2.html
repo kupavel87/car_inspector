@@ -1,8 +1,11 @@
 {% extends "base.html" %}
 
 {% block head %}
-<script src="https://maps.api.2gis.ru/2.0/loader.js?pkg=full"></script>
 <link rel="stylesheet" href="//code.jquery.com/ui/1.12.1/themes/base/jquery-ui.css">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.6.0/dist/leaflet.css"
+   integrity="sha512-xwE/Az9zrjBIphAcBb3F6JVqxf46+CDLwfLMHloNu6KEQCAWi6HcDUbeOfBIptF7tcCzusKFjFw2yuvEpDL9wQ=="
+   crossorigin=""/>
+<link rel="stylesheet" href="https://unpkg.com/leaflet-routing-machine@latest/dist/leaflet-routing-machine.css" />
 {% endblock %}
 
 {% block content %}
@@ -29,19 +32,23 @@
 
 {% block script %}
 <script src="https://code.jquery.com/ui/1.12.1/jquery-ui.js"></script>
+ <script src="https://unpkg.com/leaflet@1.6.0/dist/leaflet.js"
+   integrity="sha512-gZwIG9x3wUXg2hdXF6+rVkLF/0Vi9U8D2Ntg4Ga5I5BZpVkVxlJWbSQtXPSiUTtC0TjtGOmxa1AJPuV0CPthew=="
+   crossorigin=""></script>
+<script src="https://unpkg.com/leaflet-routing-machine@latest/dist/leaflet-routing-machine.js"></script>
 <script type="text/javascript">
-    var map;
-    var polyline;
+    var route;
     var days = [];
     var today = new Date();
     var selectday = new Date(today.getFullYear(), today.getMonth(), 2).getTime();
 
-    DG.then(function () {
-        map = DG.map('map', {
-            center: [55.73, 37.61],
-            zoom: 11
-        });
+    map = L.map('map', {
+        center: [55.74, 37.61],
+        zoom: 12
     });
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '&copy; <a href="https://openstreetmap.org/copyright">OpenStreetMap contributors</a>'
+    }).addTo(map);
 
     function updateCalendar() {
         days = [];
@@ -66,8 +73,8 @@
             });
         };
         $("#datepicker").datepicker("refresh");
-        if (polyline) {polyline.remove();}
-        map.setView([55.73, 37.61], 11);
+        if (route) {route.remove();}
+        map.setView([55.74, 37.61], 12);
     }
 
     $('#SelectCar').change(updateCalendar);
@@ -96,11 +103,14 @@
                     "date": date
                 },
                 success: function (data) {
-                    if (polyline) {polyline.remove();}
-                    polyline = DG.polyline(data.route, {
-                                color: 'blue'
-                                }).addTo(map);
-                    map.fitBounds(polyline.getBounds());
+                    if (route) {route.remove();}
+                    route = L.Routing.control({
+                                waypoints: data.route,
+                                language : 'ru',
+                                lineOptions: {
+                                    styles: [{color: 'blue', opacity: 0.8, weight: 3}]
+                                }
+                            }).addTo(map);
                 },
                 error: function (error) {
                     console.log(error);

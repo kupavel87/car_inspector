@@ -18,6 +18,13 @@ def index():
     return render_template('map/index.html', page_title=title, cars=cars)
 
 
+@blueprint.route("/v2")
+def index2():
+    title = 'Версия 2'
+    cars = Car.query.all()
+    return render_template('map/index2.html', page_title=title, cars=cars)
+
+
 @blueprint.route("/get_dates", methods=['POST'])
 def get_dates():
     plate = request.form['car']
